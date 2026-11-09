@@ -1,62 +1,44 @@
 
-from itertools import combinations
+import pandas as pd
+from mlxtend.frequent_patterns import apriori, association_rules
+from mlxtend.preprocessing import TransactionEncoder
 
-# Transaction database
-transactions = [
-    ['Milk', 'Bread', 'Butter'],
-    ['Bread', 'Butter'],
-    ['Milk', 'Bread'],
-    ['Milk', 'Butter'],
-    ['Milk', 'Bread', 'Butter']
+# 1. Define fruit shopping transactions
+fruit_dataset = [
+    ["Apple", "Banana", "Mango"],
+    ["Orange", "Banana", "Mango"],
+    ["Apple", "Orange", "Banana"],
+    ["Apple", "Mango"],
+    ["Apple", "Orange", "Banana", "Mango"]
 ]
 
-min_support = 0.4
-min_confidence = 0.6
+# 2. Transform the lists into True/False table
+te = TransactionEncoder()
+te_array = te.fit(fruit_dataset).transform(fruit_dataset)
+df = pd.DataFrame(te_array, columns=te.columns_)
 
-n = len(transactions)
+print("--- Step 1: Transformed Fruit Table ---")
+print(df)
+print("\n" + "=" * 50 + "\n")
 
-# Generate frequent itemsets
-items = set(item for t in transactions for item in t)
+# 3. Find frequent itemsets (Minimum Support = 60%)
+frequent_fruits = apriori(
+    df, min_support=0.6, use_colnames=True
+)
 
-frequent = []
+print("--- Step 2: Frequent Fruit Groups ---")
+print(frequent_fruits)
+print("\n" + "=" * 50 + "\n")
 
-# Generate itemsets of different sizes
-for size in range(1, len(items) + 1):
-    for itemset in combinations(sorted(items), size):
+# 4. Generate association rules (Minimum Confidence = 70%)
+rules = association_rules(
+    frequent_fruits, metric="confidence", min_threshold=0.7
+)
 
-        count = sum(
-            1 for t in transactions
-            if set(itemset).issubset(set(t))
-        )
+# Display selected columns
+final_rules = rules[
+    ["antecedents", "consequents", "support", "confidence", "lift"]
+]
 
-        support = count / n
-
-        if support >= min_support:
-            frequent.append((itemset, support))
-
-# Display frequent itemsets
-print("Frequent Itemsets:")
-for itemset, support in frequent:
-    print(itemset, "Support:", round(support, 2))
-
-# Generate association rules
-print("\nAssociation Rules:")
-
-for itemset, support in frequent:
-    if len(itemset) > 1:
-        for i in range(1, len(itemset)):
-            for left in combinations(itemset, i):
-                right = tuple(
-                    item for item in itemset if item not in left
-                )
-
-                left_count = sum(
-                    1 for t in transactions
-                    if set(left).issubset(set(t))
-                )
-
-                confidence = (support * n) / left_count
-
-                if confidence >= min_confidence:
-                    print(left, "->", right,
-                          "Confidence:", round(confidence, 2))
+print("--- Step 3: Actionable Rules ---")
+print(final_rules)
